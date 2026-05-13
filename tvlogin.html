@@ -2,7 +2,9 @@
 <html>
 
 <head>
+
     <meta charset="UTF-8">
+
     <title>TV Login</title>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -12,6 +14,7 @@
     <style>
 
         body{
+
             background:#111;
             color:white;
             font-family:Arial;
@@ -21,18 +24,24 @@
             height:100vh;
             flex-direction:column;
             margin:0;
+
         }
 
         .container{
+
             width:320px;
             text-align:center;
+
         }
 
         h1{
+
             margin-bottom:30px;
+
         }
 
         input{
+
             width:100%;
             padding:16px;
             font-size:24px;
@@ -40,9 +49,11 @@
             border:none;
             border-radius:8px;
             box-sizing:border-box;
+
         }
 
         button{
+
             width:100%;
             margin-top:20px;
             padding:16px;
@@ -51,23 +62,31 @@
             border:none;
             border-radius:8px;
             background:white;
+
         }
 
         button:hover{
+
             opacity:0.9;
+
         }
 
         #status{
+
             margin-top:20px;
             color:#00ff99;
             min-height:24px;
+
         }
 
         .error{
+
             color:#ff6666 !important;
+
         }
 
     </style>
+
 </head>
 
 <body>
@@ -84,7 +103,9 @@
         >
 
         <button onclick="loginWithGoogle()">
+
             Login With Google
+
         </button>
 
         <div id="status"></div>
@@ -94,6 +115,7 @@
     <script>
 
         // FIREBASE CONFIG
+
         const firebaseConfig = {
 
             apiKey: "AIzaSyA38dRLuu8WHay3mClSABvCbiLxuuwraV4",
@@ -111,9 +133,11 @@
         };
 
         // INIT FIREBASE
+
         firebase.initializeApp(firebaseConfig);
 
         // FIRESTORE
+
         const db = firebase.firestore();
 
         async function loginWithGoogle(){
@@ -122,14 +146,17 @@
                 document.getElementById("status");
 
             status.classList.remove("error");
+
             status.innerHTML = "";
 
             const code =
-                document.getElementById("tvCode")
+                document
+                .getElementById("tvCode")
                 .value
                 .trim();
 
             // VALIDATION
+
             if(code.length !== 4){
 
                 status.classList.add("error");
@@ -143,10 +170,12 @@
             try{
 
                 // GOOGLE PROVIDER
+
                 const provider =
                     new firebase.auth.GoogleAuthProvider();
 
-                // GOOGLE DRIVE READONLY ACCESS
+                // GOOGLE DRIVE ACCESS
+
                 provider.addScope(
                     "https://www.googleapis.com/auth/drive.readonly"
                 );
@@ -154,26 +183,29 @@
                 status.innerHTML =
                     "Opening Google Login...";
 
-                // LOGIN
+                // GOOGLE LOGIN
+
                 const result =
-                    await firebase.auth()
+                    await firebase
+                    .auth()
                     .signInWithPopup(provider);
 
-                // GET CREDENTIAL
-                const credential =
-                    firebase.auth.GoogleAuthProvider
-                    .credentialFromResult(result);
+                // USER
 
-                if(!credential){
+                const user =
+                    result.user;
+
+                if(!user){
 
                     throw new Error(
-                        "Google credential not found"
+                        "Google user not found"
                     );
                 }
 
-                // ACCESS TOKEN
+                // TOKEN
+
                 const accessToken =
-                    credential.accessToken;
+                    await user.getIdToken();
 
                 if(!accessToken){
 
@@ -186,24 +218,31 @@
                     "Connecting TV...";
 
                 // UPDATE FIRESTORE
+
                 await db
                     .collection("auth_bridge")
                     .doc(code)
                     .update({
 
-                        access_token: accessToken,
+                        access_token:
+                            accessToken,
 
-                        refresh_token: "temp_refresh_token",
+                        refresh_token:
+                            "temp_refresh_token",
 
-                        status: "success",
+                        status:
+                            "success",
 
                         updatedAt:
-                            firebase.firestore.FieldValue
+                            firebase
+                            .firestore
+                            .FieldValue
                             .serverTimestamp()
 
                     });
 
-                // SUCCESS UI
+                // SUCCESS SCREEN
+
                 document.body.innerHTML = `
 
                     <div style="
@@ -230,15 +269,16 @@
 
                 `;
 
-            }catch(error){
+            }
+            catch(error){
 
                 console.error(error);
 
                 status.classList.add("error");
 
                 status.innerHTML =
-                    error.message || "Login Failed";
-
+                    error.message ||
+                    "Login Failed";
             }
         }
 
