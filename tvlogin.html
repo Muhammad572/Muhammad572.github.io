@@ -94,15 +94,10 @@
 const firebaseConfig = {
 
     apiKey: "AIzaSyA38dRLuu8WHay3mClSABvCbiLxuuwraV4",
-
     authDomain: "mediahub-tv-auth.firebaseapp.com",
-
     projectId: "mediahub-tv-auth",
-
     storageBucket: "mediahub-tv-auth.firebasestorage.app",
-
     messagingSenderId: "901749821386",
-
     appId: "1:901749821386:web:329b8f60dd8ccb4b2e8933"
 
 };
@@ -111,10 +106,10 @@ firebase.initializeApp(firebaseConfig);
 
 const db = firebase.firestore();
 
-async function loginWithGoogle(){
+const status =
+    document.getElementById("status");
 
-    const status =
-        document.getElementById("status");
+async function loginWithGoogle(){
 
     status.innerHTML = "";
     status.classList.remove("error");
@@ -133,6 +128,11 @@ async function loginWithGoogle(){
         return;
     }
 
+    localStorage.setItem(
+        "tv_code",
+        code
+    );
+
     try{
 
         const provider =
@@ -146,83 +146,8 @@ async function loginWithGoogle(){
             prompt: "consent"
         });
 
-        status.innerHTML =
-            "Opening Google Login...";
-
-        const result =
-            await firebase.auth()
-            .signInWithPopup(provider);
-
-        const credential =
-            firebase.auth.GoogleAuthProvider
-            .credentialFromResult(result);
-
-        console.log("RESULT:", result);
-        console.log("CREDENTIAL:", credential);
-
-        if(!credential){
-
-            throw new Error(
-                "Google credential missing"
-            );
-        }
-
-        const accessToken =
-            credential.accessToken;
-
-        if(!accessToken){
-
-            throw new Error(
-                "Google access token missing"
-            );
-        }
-
-        status.innerHTML =
-            "Connecting TV...";
-
-        await db
-            .collection("auth_bridge")
-            .doc(code)
-            .update({
-
-                access_token:
-                    accessToken,
-
-                refresh_token:
-                    "bridge_login",
-
-                status:
-                    "success",
-
-                updatedAt:
-                    firebase.firestore
-                    .FieldValue
-                    .serverTimestamp()
-
-            });
-
-        document.body.innerHTML = `
-
-            <div style="
-                background:#111;
-                color:white;
-                height:100vh;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                flex-direction:column;
-                font-family:Arial;
-            ">
-
-                <h1>Login Success</h1>
-
-                <p>
-                    You can now return to TV.
-                </p>
-
-            </div>
-
-        `;
+        await firebase.auth()
+            .signInWithRedirect(provider);
 
     }
     catch(error){
@@ -235,6 +160,106 @@ async function loginWithGoogle(){
             error.message || "Login Failed";
     }
 }
+
+firebase.auth()
+.getRedirectResult()
+.then(async (result) => {
+
+    if(!result.user){
+        return;
+    }
+
+    const credential =
+        firebase.auth.GoogleAuthProvider
+        .credentialFromResult(result);
+
+    if(!credential){
+
+        throw new Error(
+            "Google credential missing"
+        );
+    }
+
+    const accessToken =
+        credential.accessToken;
+
+    if(!accessToken){
+
+        throw new Error(
+            "Access token missing"
+        );
+    }
+
+    const code =
+        localStorage.getItem(
+            "tv_code"
+        );
+
+    if(!code){
+
+        throw new Error(
+            "TV code missing"
+        );
+    }
+
+    status.innerHTML =
+        "Connecting TV...";
+
+    await db
+        .collection("auth_bridge")
+        .doc(code)
+        .update({
+
+            access_token:
+                accessToken,
+
+            refresh_token:
+                "bridge_login",
+
+            status:
+                "success",
+
+            updatedAt:
+                firebase.firestore
+                .FieldValue
+                .serverTimestamp()
+
+        });
+
+    document.body.innerHTML = `
+
+        <div style="
+            background:#111;
+            color:white;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            flex-direction:column;
+            font-family:Arial;
+        ">
+
+            <h1>Login Success</h1>
+
+            <p>
+                You can now return to TV.
+            </p>
+
+        </div>
+
+    `;
+
+})
+.catch((error) => {
+
+    console.error(error);
+
+    status.classList.add("error");
+
+    status.innerHTML =
+        error.message || "Login Failed";
+
+});
 
 </script>
 
