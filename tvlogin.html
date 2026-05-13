@@ -4,7 +4,6 @@
 <head>
 
     <meta charset="UTF-8">
-
     <title>TV Login</title>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -14,7 +13,6 @@
     <style>
 
         body{
-
             background:#111;
             color:white;
             font-family:Arial;
@@ -24,24 +22,18 @@
             height:100vh;
             flex-direction:column;
             margin:0;
-
         }
 
         .container{
-
             width:320px;
             text-align:center;
-
         }
 
         h1{
-
             margin-bottom:30px;
-
         }
 
         input{
-
             width:100%;
             padding:16px;
             font-size:24px;
@@ -49,11 +41,9 @@
             border:none;
             border-radius:8px;
             box-sizing:border-box;
-
         }
 
         button{
-
             width:100%;
             margin-top:20px;
             padding:16px;
@@ -62,27 +52,16 @@
             border:none;
             border-radius:8px;
             background:white;
-
-        }
-
-        button:hover{
-
-            opacity:0.9;
-
         }
 
         #status{
-
             margin-top:20px;
-            color:#00ff99;
             min-height:24px;
-
+            color:#00ff99;
         }
 
         .error{
-
             color:#ff6666 !important;
-
         }
 
     </style>
@@ -103,186 +82,161 @@
         >
 
         <button onclick="loginWithGoogle()">
-
             Login With Google
-
         </button>
 
         <div id="status"></div>
 
     </div>
 
-    <script>
+<script>
 
-        // FIREBASE CONFIG
+const firebaseConfig = {
 
-        const firebaseConfig = {
+    apiKey: "AIzaSyA38dRLuu8WHay3mClSABvCbiLxuuwraV4",
 
-            apiKey: "AIzaSyA38dRLuu8WHay3mClSABvCbiLxuuwraV4",
+    authDomain: "mediahub-tv-auth.firebaseapp.com",
 
-            authDomain: "mediahub-tv-auth.firebaseapp.com",
+    projectId: "mediahub-tv-auth",
 
-            projectId: "mediahub-tv-auth",
+    storageBucket: "mediahub-tv-auth.firebasestorage.app",
 
-            storageBucket: "mediahub-tv-auth.firebasestorage.app",
+    messagingSenderId: "901749821386",
 
-            messagingSenderId: "901749821386",
+    appId: "1:901749821386:web:329b8f60dd8ccb4b2e8933"
 
-            appId: "1:901749821386:web:329b8f60dd8ccb4b2e8933"
+};
 
-        };
+firebase.initializeApp(firebaseConfig);
 
-        // INIT FIREBASE
+const db = firebase.firestore();
 
-        firebase.initializeApp(firebaseConfig);
+async function loginWithGoogle(){
 
-        // FIRESTORE
+    const status =
+        document.getElementById("status");
 
-        const db = firebase.firestore();
+    status.innerHTML = "";
+    status.classList.remove("error");
 
-        async function loginWithGoogle(){
+    const code =
+        document.getElementById("tvCode")
+        .value
+        .trim();
 
-            const status =
-                document.getElementById("status");
+    if(code.length !== 4){
 
-            status.classList.remove("error");
+        status.classList.add("error");
+        status.innerHTML =
+            "Enter valid 4 digit code";
 
-            status.innerHTML = "";
+        return;
+    }
 
-            const code =
-                document
-                .getElementById("tvCode")
-                .value
-                .trim();
+    try{
 
-            // VALIDATION
+        const provider =
+            new firebase.auth.GoogleAuthProvider();
 
-            if(code.length !== 4){
+        provider.addScope(
+            "https://www.googleapis.com/auth/drive.readonly"
+        );
 
-                status.classList.add("error");
+        provider.setCustomParameters({
+            prompt: "consent"
+        });
 
-                status.innerHTML =
-                    "Enter valid 4 digit code";
+        status.innerHTML =
+            "Opening Google Login...";
 
-                return;
-            }
+        const result =
+            await firebase.auth()
+            .signInWithPopup(provider);
 
-            try{
+        const credential =
+            firebase.auth.GoogleAuthProvider
+            .credentialFromResult(result);
 
-                // GOOGLE PROVIDER
+        console.log("RESULT:", result);
+        console.log("CREDENTIAL:", credential);
 
-                const provider =
-                    new firebase.auth.GoogleAuthProvider();
+        if(!credential){
 
-                // GOOGLE DRIVE ACCESS
-
-                provider.addScope(
-                    "https://www.googleapis.com/auth/drive.readonly"
-                );
-
-                status.innerHTML =
-                    "Opening Google Login...";
-
-                // GOOGLE LOGIN
-
-                const result =
-                    await firebase
-                    .auth()
-                    .signInWithPopup(provider);
-
-                // USER
-
-                const user =
-                    result.user;
-
-                if(!user){
-
-                    throw new Error(
-                        "Google user not found"
-                    );
-                }
-
-                // TOKEN
-
-                const accessToken =
-                    await user.getIdToken();
-
-                if(!accessToken){
-
-                    throw new Error(
-                        "Access token missing"
-                    );
-                }
-
-                status.innerHTML =
-                    "Connecting TV...";
-
-                // UPDATE FIRESTORE
-
-                await db
-                    .collection("auth_bridge")
-                    .doc(code)
-                    .update({
-
-                        access_token:
-                            accessToken,
-
-                        refresh_token:
-                            "temp_refresh_token",
-
-                        status:
-                            "success",
-
-                        updatedAt:
-                            firebase
-                            .firestore
-                            .FieldValue
-                            .serverTimestamp()
-
-                    });
-
-                // SUCCESS SCREEN
-
-                document.body.innerHTML = `
-
-                    <div style="
-                        display:flex;
-                        justify-content:center;
-                        align-items:center;
-                        height:100vh;
-                        flex-direction:column;
-                        background:#111;
-                        color:white;
-                        font-family:Arial;
-                        text-align:center;
-                    ">
-
-                        <h1>
-                            Login Success
-                        </h1>
-
-                        <p>
-                            You can now return to your TV.
-                        </p>
-
-                    </div>
-
-                `;
-
-            }
-            catch(error){
-
-                console.error(error);
-
-                status.classList.add("error");
-
-                status.innerHTML =
-                    error.message ||
-                    "Login Failed";
-            }
+            throw new Error(
+                "Google credential missing"
+            );
         }
 
-    </script>
+        const accessToken =
+            credential.accessToken;
+
+        if(!accessToken){
+
+            throw new Error(
+                "Google access token missing"
+            );
+        }
+
+        status.innerHTML =
+            "Connecting TV...";
+
+        await db
+            .collection("auth_bridge")
+            .doc(code)
+            .update({
+
+                access_token:
+                    accessToken,
+
+                refresh_token:
+                    "bridge_login",
+
+                status:
+                    "success",
+
+                updatedAt:
+                    firebase.firestore
+                    .FieldValue
+                    .serverTimestamp()
+
+            });
+
+        document.body.innerHTML = `
+
+            <div style="
+                background:#111;
+                color:white;
+                height:100vh;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                flex-direction:column;
+                font-family:Arial;
+            ">
+
+                <h1>Login Success</h1>
+
+                <p>
+                    You can now return to TV.
+                </p>
+
+            </div>
+
+        `;
+
+    }
+    catch(error){
+
+        console.error(error);
+
+        status.classList.add("error");
+
+        status.innerHTML =
+            error.message || "Login Failed";
+    }
+}
+
+</script>
 
 </body>
 
